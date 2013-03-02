@@ -2,18 +2,62 @@
 :- use_module(library(system)).
 
 % Choose between 'verbose' or 'quiet' 
-verbose_level(verbose).
+verbose_level(quiet).
 
 test_strategy(0, _, _) :- !.
 
+strategy(random).
+strategy(bloodlust).
+strategy(self_preservation).
+strategy(land_grab).
+strategy(minimax).
+
+% Compute statistics
+compute(N) :-
+    write('P1 strategy |  P2 strategy | Games | P1 wins | P2 wins | Draws | Avg Moves | Avg Time'),
+    nl,
+    strategy(Str1),
+    strategy(Str2),
+    now(Start),
+    test_strategy(N, Str1, Str2, Moves, Winners),
+    now(End),
+    count(Winners, 'draw', DrawRes),
+    count(Winners, 'exhaust', ExhaustRes),
+    DrawTotal is DrawRes + ExhaustRes,
+    count(Winners, 'b', BRes),
+    count(Winners, 'r', RRes),
+    longest(Moves, LongestRes),
+    shortest(Moves, ShortestRes),
+    average_moves(Moves, AverageRes),
+    AvgTime is (End - Start)/N,
+    write(Str1),
+    write(' | '),
+    write(Str2),
+    write(' | '),
+    write(N),
+    write(' | '),
+    write(BRes),
+    write(' | '),
+    write(RRes),
+    write(' | '),
+    write(DrawTotal),
+    write(' | '),
+    write(AverageRes),
+    write(' | '),
+    write(AvgTime),
+    nl,
+    fail.
+
 % Test strategy
 test_strategy(N, Str1, Str2) :-
-    format('Comparing ~w with ~w :~n~n',[Str1, Str2]),
+    format('Comparing ~w with ~w:~n~n',[Str1, Str2]),
 	now(Start),
 	test_strategy(N, Str1, Str2, Moves, Winners),
 	now(End),
 	count(Winners, 'draw', DrawRes),
-	format('Number of draws is: ~w~n', [DrawRes]),
+    count(Winners, 'exhaust', ExhaustRes),
+    DrawTotal is DrawRes + ExhaustRes,
+	format('Number of draws is: ~w~n', [DrawTotal]),
 	count(Winners, 'b', BRes),
 	format('Number of wins for player 1 is: ~w~n', [BRes]),
 	count(Winners, 'r', RRes),
@@ -23,9 +67,9 @@ test_strategy(N, Str1, Str2) :-
 	shortest(Moves, ShortestRes),
 	format('Shortest move in a game is: ~w~n', [ShortestRes]),
 	average_moves(Moves, AverageRes),
-	format('Average move in a game is: ~w~n', [AverageRes]),
+	format('Average game length is: ~w~n', [AverageRes]),
 	AvgTime is (End - Start)/N,
-	format('Average time taken to play a game is: ~w~n',[AvgTime]).
+	format('Average game time is: ~w~n',[AvgTime]).
 
 test_strategy(0, _, _, [], []).
 test_strategy(N, Str1, Str2, [NumMoves|Moves], [WinningPlayer|Winners]) :-

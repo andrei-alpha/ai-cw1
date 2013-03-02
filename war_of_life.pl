@@ -36,7 +36,7 @@ make_move([[],[]], ShowFlag, [[],[]], _, _, _, _, NumMoves, NumMoves, 'draw') :-
 
 make_move(_, ShowFlag, _, _, _, _, _, 250, 250, 'exhaust') :-
  !,
- show_winner(ShowFlag, 'exhaust', 250).
+ show_winner(ShowFlag, 'draw', 250).
 
 make_move([[],Reds], ShowFlag, [[],Reds], _, _, _, _, NumMoves, NumMoves, 'r') :-
  !,
