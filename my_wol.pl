@@ -1,43 +1,31 @@
 :- [war_of_life].
 :- use_module(library(system)).
 
-% Choose between 'verbose' or 'quite' 
-verbose_level(quiet).
+% Choose between 'verbose' or 'quiet' 
+verbose_level(verbose).
 
 test_strategy(0, _, _) :- !.
 
 % Test strategy
 test_strategy(N, Str1, Str2) :-
+    format('Comparing ~w with ~w :~n~n',[Str1, Str2]),
 	now(Start),
 	test_strategy(N, Str1, Str2, Moves, Winners),
 	now(End),
 	count(Winners, 'draw', DrawRes),
-	write('Number of draws is:'),
-	write(DrawRes),
-	nl,
+	format('Number of draws is: ~w~n', [DrawRes]),
 	count(Winners, 'b', BRes),
-	write('Number of wins for player 1 is:'),
-	write(BRes),
-	nl,
+	format('Number of wins for player 1 is: ~w~n', [BRes]),
 	count(Winners, 'r', RRes),
-	write('Number of wins for player 2 is:'),
-	write(RRes),
-	nl,
+	format('Number of wins for player 2 is: ~w~n', [RRes]),
 	longest(Moves, LongestRes),
-	write('Longest move in a game is:'),
-	write(LongestRes),
-	nl,
+	format('Longest move in a game is: ~w~n', [LongestRes]),
 	shortest(Moves, ShortestRes),
-	write('Shortest move in a game is:'),
-	write(ShortestRes),
-	nl,
+	format('Shortest move in a game is: ~w~n', [ShortestRes]),
 	average_moves(Moves, AverageRes),
-	write('Average move in a game is:'),
-	write(AverageRes),
-	nl,
+	format('Average move in a game is: ~w~n', [AverageRes]),
 	AvgTime is (End - Start)/N,
-	write('Average time taken to play a game is:'),
-	write(AvgTime).
+	format('Average time taken to play a game is: ~w~n',[AvgTime]).
 
 test_strategy(0, _, _, [], []).
 test_strategy(N, Str1, Str2, [NumMoves|Moves], [WinningPlayer|Winners]) :-
@@ -82,20 +70,20 @@ average_moves(Moves, Res) :-
 	Res is Sum / Count.
 
 % Game strategies 
-bloodlust(PlayerColour, CurrentBoardState, NewBoardState, Move).
+bloodlust(PlayerColor, CurrentBoardState, NewBoardState, Move) :-
     best_move(PlayerColor, CurrentBoardState, bloodlust, NewBoardState, Move, _).
 
-self_preservation(PlayerColour, CurrentBoardState, NewBoardState, Move).
+self_preservation(PlayerColor, CurrentBoardState, NewBoardState, Move) :-
     best_move(PlayerColor, CurrentBoardState, self_preservation, NewBoardState, Move, _).
 
-land_grab(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
+land_grab(PlayerColor, CurrentBoardState, NewBoardState, Move) :-
     best_move(PlayerColor, CurrentBoardState, land_grab, NewBoardState, Move, _).
 
-minimax(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
-    best_move(PlayerColor, CurrentBoardState, minmax, NewBoardState, Move, _).
+minimax(PlayerColor, CurrentBoardState, NewBoardState, Move) :-
+    best_move(PlayerColor, CurrentBoardState, minimax, NewBoardState, Move, _).
 
 % Get all moves
-get_moves(Alive, OtherPlayerAlive, Move) :-
+get_moves(Alive, OtherPlayerAlive, PossMoves) :-
     findall([A,B,MA,MB],(member([A,B], Alive),
                     neighbour_position(A,B,[MA,MB]),
                   \+member([MA,MB],Alive),
@@ -115,15 +103,15 @@ compose_board('b', B, R, [B,R]).
 compose_board('r', R, B, [B,R]).
 
 % Score for bloodlust: the number of opponent's pieces on the board. 
-get_score(PlayerColor, BoardState, bloodlust, Score).
-    decompose_board(PlayerColor, BoardState, _, OponentPieces),
-    length(OponentPieces,NumPieces),
+get_score(PlayerColor, BoardState, bloodlust, Score) :-
+    decompose_board(PlayerColor, BoardState, _, OpponentPieces),
+    length(OpponentPieces,NumPieces),
 	Score is -NumPieces.
 
 % Score for self_preservation: the number of player's pieces on the board. 
-get_score(PlayerColor, BoardState, self_preservation, Score).
-   	decompose_board(PlayerColor, BoardState, _, OponentPieces),
-	Score is length(OponentPieces).
+get_score(PlayerColor, BoardState, self_preservation, Score) :-
+   	decompose_board(PlayerColor, BoardState, PlayerPieces, _),
+    length(PlayerPieces, Score).
 
 % Score for land_grab: the number of player's pieces - the number of opponent's pieces.
 get_score(PlayerColor, BoardState, land_grab, Score) :-
@@ -132,8 +120,15 @@ get_score(PlayerColor, BoardState, land_grab, Score) :-
     length(OpponentPieces, Len2),
     Score is Len1 - Len2.
 
+% If we have no more pieces left
+get_score(PlayerColor, BoardState, minimax, Score) :-
+    decompose_board(PlayerColor, BoardState, PlayerPieces, []),
+    !,
+    length(PlayerPieces, Score).
+
+
 % Score for min-max: we look one more move ahead and use land_grab strategy 
-get_score(PlayerColor, BoardState, minmax, Score) :-
+get_score(PlayerColor, BoardState, minimax, Score) :-
     opponent(PlayerColor, OpponentColor),
     best_move(OpponentColor, BoardState, land_grab, _, _, OpponentScore),
     Score is -OpponentScore.
