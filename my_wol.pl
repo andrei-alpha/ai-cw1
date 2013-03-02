@@ -2,7 +2,7 @@
 :- use_module(library(system)).
 
 % Choose between 'verbose' or 'quite' 
-verbose_level(verbose).
+verbose_level(quiet).
 
 test_strategy(0, _, _) :- !.
 
@@ -83,10 +83,10 @@ average_moves(Moves, Res) :-
 
 % Game strategies 
 bloodlust(PlayerColour, CurrentBoardState, NewBoardState, Move).
-    % TO DO:
+    best_move(PlayerColor, CurrentBoardState, bloodlust, NewBoardState, Move, _).
 
 self_preservation(PlayerColour, CurrentBoardState, NewBoardState, Move).
-    % TO DO:
+    best_move(PlayerColor, CurrentBoardState, self_preservation, NewBoardState, Move, _).
 
 land_grab(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
     best_move(PlayerColor, CurrentBoardState, land_grab, NewBoardState, Move, _).
@@ -116,11 +116,14 @@ compose_board('r', R, B, [B,R]).
 
 % Score for bloodlust: the number of opponent's pieces on the board. 
 get_score(PlayerColor, BoardState, bloodlust, Score).
-    % TO DO:
+    decompose_board(PlayerColor, BoardState, _, OponentPieces),
+    length(OponentPieces,NumPieces),
+	Score is -NumPieces.
 
 % Score for self_preservation: the number of player's pieces on the board. 
 get_score(PlayerColor, BoardState, self_preservation, Score).
-    % TO DO:
+   	decompose_board(PlayerColor, BoardState, _, OponentPieces),
+	Score is length(OponentPieces).
 
 % Score for land_grab: the number of player's pieces - the number of opponent's pieces.
 get_score(PlayerColor, BoardState, land_grab, Score) :-
