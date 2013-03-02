@@ -1,7 +1,12 @@
 :- [war_of_life].
 :- use_module(library(system)).
+
+% Choose between 'verbose' or 'quite' 
+verbose_level(verbose).
+
 test_strategy(0, _, _) :- !.
 
+% Test strategy
 test_strategy(N, Str1, Str2) :-
 	now(Start),
 	test_strategy(N, Str1, Str2, Moves, Winners),
@@ -37,7 +42,8 @@ test_strategy(N, Str1, Str2) :-
 test_strategy(0, _, _, [], []).
 test_strategy(N, Str1, Str2, [NumMoves|Moves], [WinningPlayer|Winners]) :-
 	N > 0,
-	play(verbose, Str1, Str2, NumMoves, WinningPlayer),
+    verbose_level(level),
+	play(level, Str1, Str2, NumMoves, WinningPlayer),
 	NewN is N-1,
 	test_strategy(NewN, Str1, Str2, Moves, Winners).
 
@@ -74,3 +80,70 @@ sum_count_moves([H|T], UpdateSum, UpdateCount) :-
 average_moves(Moves, Res) :-
 	sum_count_moves(Moves, Sum, Count),
 	Res is Sum / Count.
+
+% Game strategies 
+bloodlust(PlayerColour, CurrentBoardState, NewBoardState, Move).
+    % TO DO:
+
+self_preservation(PlayerColour, CurrentBoardState, NewBoardState, Move).
+    % TO DO:
+
+land_grab(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
+    best_move(PlayerColor, CurrentBoardState, land_grab, NewBoardState, Move, _).
+
+minimax(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
+    best_move(PlayerColor, CurrentBoardState, minmax, NewBoardState, Move, _).
+
+% Get oponent
+oponent('b', 'r').
+oponent('r', 'b').
+
+% Decompose the board
+decompose_board('b', [B,R], B, R).
+decompose_board('r', [B,R], R, B).    
+
+% Compose the board
+compose_board('b', B, R, [B,R]).
+compose_board('r', R, B, [B,R]).
+
+% Score for bloodlust: the number of oponent's pieces on the board. 
+get_score(PlayerColor, BoardState, bloodlust, Score).
+    % TO DO:
+
+% Score for self_preservation: the number of player's pieces on the board. 
+get_score(PlayerColor, BoardState, self_preservation, Score).
+    % TO DO:
+
+% Score for land_grab: the number of player's pieces - the number of oponent's pieces.
+get_score(PlayerColor, BoardState, land_grab, Score) :-
+    decompose_board(PlayerColor, BoardState, PlayerPieces, OponentPieces),
+    Score is lenght(PlayerPieces) - length(OponentPieces).
+
+% Score for min-max: we look one more move ahead and use land_grab strategy 
+get_score(PlayerColor, BoardState, minmax, Score) :-
+    oponent(PlayerColor, OponentColor),
+    best_move(OponentColor, BoardState, land_grab, _, _, OponentScore),
+    Score is -OponentScore.
+
+% Get the best move for the current strategy
+best_move(PlayerColor, BoardState, Strategy, NewBoardState, Move, Score) :-
+    decompose_board(PlayerColor, BoardState, PlayerPieces, OponentPieces),
+    random_move(PlayerPieces, OponentPieces, Moves),
+    make_moves(PlayerColor, BoardState, Strategy, Moves, Move, Score),
+    alter_board(Move, PlayerPieces, NewPlayerPieces),
+    compose_board(PlayerColor, NewPlayerPieces, OponentPieces, NewBoardState).
+    
+% Makes all the moves and returns the best one for the current strategy
+make_moves(_, _, _, _, [], '?', 'undefined'). 
+make_moves(PlayerColor, BoardState, Strategy, [Move|Moves], BestMove, BestScore) :-
+    decompose_board(PlayerColor, BoardState, PlayerPieces, OponentPieces),
+    alter_board(Move, PlayerPieces, NewPlayerPieces),
+    compose_board(PlayerColor, NewPlayerPieces, OponentPieces, NewBoardState),
+    next_generation(NewBoardState, NewGenBoardState),
+    get_score(PlayerColor, NewGenBoardState, Strategy, Score),
+    make_moves(PlayerColor, BoardState, Strategy, Moves, RemMove, RemScore),
+    ( (RemScore == 'undefined'; RemScore < Score) ->
+        (BestMove = Move, BestScore = Score);
+        (BestMove = RemMove, BestScore = RemScore)
+    ).
+    
