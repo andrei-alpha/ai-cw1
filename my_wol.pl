@@ -42,8 +42,8 @@ test_strategy(N, Str1, Str2) :-
 test_strategy(0, _, _, [], []).
 test_strategy(N, Str1, Str2, [NumMoves|Moves], [WinningPlayer|Winners]) :-
 	N > 0,
-    verbose_level(level),
-	play(level, Str1, Str2, NumMoves, WinningPlayer),
+    verbose_level(Level),
+	play(Level, Str1, Str2, NumMoves, WinningPlayer),
 	NewN is N-1,
 	test_strategy(NewN, Str1, Str2, Moves, Winners).
 
@@ -94,9 +94,17 @@ land_grab(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
 minimax(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
     best_move(PlayerColor, CurrentBoardState, minmax, NewBoardState, Move, _).
 
-% Get oponent
-oponent('b', 'r').
-oponent('r', 'b').
+% Get all moves
+get_moves(Alive, OtherPlayerAlive, Move) :-
+    findall([A,B,MA,MB],(member([A,B], Alive),
+                    neighbour_position(A,B,[MA,MB]),
+                  \+member([MA,MB],Alive),
+                  \+member([MA,MB],OtherPlayerAlive)),
+     PossMoves).
+
+% Get opponent
+opponent('b', 'r').
+opponent('r', 'b').
 
 % Decompose the board
 decompose_board('b', [B,R], B, R).
@@ -106,7 +114,7 @@ decompose_board('r', [B,R], R, B).
 compose_board('b', B, R, [B,R]).
 compose_board('r', R, B, [B,R]).
 
-% Score for bloodlust: the number of oponent's pieces on the board. 
+% Score for bloodlust: the number of opponent's pieces on the board. 
 get_score(PlayerColor, BoardState, bloodlust, Score).
     % TO DO:
 
@@ -114,31 +122,33 @@ get_score(PlayerColor, BoardState, bloodlust, Score).
 get_score(PlayerColor, BoardState, self_preservation, Score).
     % TO DO:
 
-% Score for land_grab: the number of player's pieces - the number of oponent's pieces.
+% Score for land_grab: the number of player's pieces - the number of opponent's pieces.
 get_score(PlayerColor, BoardState, land_grab, Score) :-
-    decompose_board(PlayerColor, BoardState, PlayerPieces, OponentPieces),
-    Score is lenght(PlayerPieces) - length(OponentPieces).
+    decompose_board(PlayerColor, BoardState, PlayerPieces, OpponentPieces),
+    length(PlayerPieces, Len1),
+    length(OpponentPieces, Len2),
+    Score is Len1 - Len2.
 
 % Score for min-max: we look one more move ahead and use land_grab strategy 
 get_score(PlayerColor, BoardState, minmax, Score) :-
-    oponent(PlayerColor, OponentColor),
-    best_move(OponentColor, BoardState, land_grab, _, _, OponentScore),
-    Score is -OponentScore.
+    opponent(PlayerColor, OpponentColor),
+    best_move(OpponentColor, BoardState, land_grab, _, _, OpponentScore),
+    Score is -OpponentScore.
 
 % Get the best move for the current strategy
 best_move(PlayerColor, BoardState, Strategy, NewBoardState, Move, Score) :-
-    decompose_board(PlayerColor, BoardState, PlayerPieces, OponentPieces),
-    random_move(PlayerPieces, OponentPieces, Moves),
+    decompose_board(PlayerColor, BoardState, PlayerPieces, OpponentPieces),
+    get_moves(PlayerPieces, OpponentPieces, Moves),
     make_moves(PlayerColor, BoardState, Strategy, Moves, Move, Score),
     alter_board(Move, PlayerPieces, NewPlayerPieces),
-    compose_board(PlayerColor, NewPlayerPieces, OponentPieces, NewBoardState).
+    compose_board(PlayerColor, NewPlayerPieces, OpponentPieces, NewBoardState).
     
 % Makes all the moves and returns the best one for the current strategy
-make_moves(_, _, _, _, [], '?', 'undefined'). 
+make_moves(_, _, _, [], '?', 'undefined'). 
 make_moves(PlayerColor, BoardState, Strategy, [Move|Moves], BestMove, BestScore) :-
-    decompose_board(PlayerColor, BoardState, PlayerPieces, OponentPieces),
+    decompose_board(PlayerColor, BoardState, PlayerPieces, OpponentPieces),
     alter_board(Move, PlayerPieces, NewPlayerPieces),
-    compose_board(PlayerColor, NewPlayerPieces, OponentPieces, NewBoardState),
+    compose_board(PlayerColor, NewPlayerPieces, OpponentPieces, NewBoardState),
     next_generation(NewBoardState, NewGenBoardState),
     get_score(PlayerColor, NewGenBoardState, Strategy, Score),
     make_moves(PlayerColor, BoardState, Strategy, Moves, RemMove, RemScore),
